@@ -23,7 +23,7 @@ import {
   Calendar, CalendarDays, Monitor, Globe, ChevronRight, CornerDownLeft, TrendingUp,
   Bot, Megaphone, Briefcase, GraduationCap, Users, ShieldAlert,
   Wallet, Sparkles, Settings, UserCheck, Play, UserX, MapPin, Map,
-  Clock, CheckCircle, Database, HelpCircle, AlertTriangle, FileSpreadsheet
+  Clock, CheckCircle, Database, HelpCircle, AlertTriangle, FileSpreadsheet, Menu, X
 } from "lucide-react";
 
 import {
@@ -60,6 +60,9 @@ export default function App() {
   // App UI Layout
   const [isInitializing, setIsInitializing] = useState(true);
   const [activeModule, setActiveModule] = useState<string>("dashboard");
+  
+  // حالة التحكم في فتح وإغلاق القائمة المنسدلة في الموبايل
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   
   // Login Page states & credentials checking
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -580,7 +583,7 @@ export default function App() {
   ];
 
   return (
-    <div className="min-h-screen bg-slate-100 text-slate-800 font-sans flex flex-col justify-between" id="erp-root-application">
+    <div className="min-h-screen bg-slate-100 text-slate-800 font-sans flex flex-col justify-between relative overflow-x-hidden" id="erp-root-application">
       
       {/* Top Header Navigation - Complete Purple Bar Mirroring the Mockup */}
       <header className="bg-[#4c1d95] border-b border-[#3b0764] px-4 py-2.5 flex flex-col xl:flex-row justify-between items-center gap-4 sticky top-0 z-40 text-white shadow-md">
@@ -589,6 +592,14 @@ export default function App() {
         <div className="flex items-center gap-3 w-full xl:w-auto justify-between xl:justify-start">
           
           <div className="flex items-center gap-2">
+            {/* زر القائمة المنسدلة المخصص للموبايل والتابلت فقط يظهر ويختفي ذكياً */}
+            <button 
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              className="lg:hidden p-2 bg-white/10 hover:bg-white/15 border border-white/15 rounded-xl text-white outline-none cursor-pointer"
+            >
+              {isMobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            </button>
+
             {/* Operator Badge with border indicator */}
             <div className="text-right flex items-center gap-2 bg-white/10 p-1.5 px-3 rounded-xl border border-white/20">
               <img 
@@ -713,10 +724,12 @@ export default function App() {
       </header>
 
       {/* Main Core Body */}
-      <main className="flex-1 p-4 lg:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6 max-w-7xl mx-auto w-full">
+      <main className="flex-1 p-4 lg:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6 max-w-7xl mx-auto w-full relative">
         
-        {/* Workspace Quick Sidebar Navigation - 3 cols - Pure White Design */}
-        <aside className="lg:col-span-3 bg-white border border-slate-200 rounded-2xl p-4 flex flex-col justify-between shadow-sm hover:shadow transition-shadow space-y-4">
+        {/* Workspace Quick Sidebar Navigation - تظهر جانبية على الكمبيوتر وثابتة، ومنسدلة مرنة على الموبايل */}
+        <aside className={`lg:col-span-3 bg-white border border-slate-200 rounded-2xl p-4 flex flex-col justify-between shadow-sm hover:shadow transition-all duration-300 space-y-4 z-30
+          ${isMobileMenuOpen ? "absolute top-4 right-4 left-4 block bg-white" : "hidden lg:flex"}`}
+        >
           
           <div className="space-y-1">
             {/* Logo space mapping representing the green indicator from top photo */}
@@ -731,7 +744,7 @@ export default function App() {
             <div className="text-[9px] text-slate-400 font-extrabold tracking-widest font-sans uppercase pt-4 pb-2 text-right">أقسام ومجمعات الـ ERP</div>
             
             <button
-              onClick={() => setActiveModule("dashboard")}
+              onClick={() => { setActiveModule("dashboard"); setIsMobileMenuOpen(false); }}
               className={`w-full flex items-center justify-between py-2 px-3 rounded-lg transition text-right text-xs font-sans border-r-4 ${
                 activeModule === "dashboard" ? "bg-indigo-600 text-white font-bold" : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
               }`}
@@ -741,7 +754,7 @@ export default function App() {
             </button>
 
             <button
-              onClick={() => setActiveModule("hr")}
+              onClick={() => { setActiveModule("hr"); setIsMobileMenuOpen(false); }}
               className={`w-full flex items-center justify-between py-2 px-3 rounded-lg transition text-right text-xs font-sans border-r-4 ${
                 activeModule === "hr" ? "bg-indigo-600 text-white font-bold" : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
               }`}
@@ -751,7 +764,7 @@ export default function App() {
             </button>
 
             <button
-              onClick={() => setActiveModule("marketing")}
+              onClick={() => { setActiveModule("marketing"); setIsMobileMenuOpen(false); }}
               className={`w-full flex items-center justify-between py-2 px-3 rounded-lg transition text-right text-xs font-sans border-r-4 ${
                 activeModule === "marketing" ? "bg-indigo-600 text-white font-bold" : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
               }`}
@@ -761,7 +774,7 @@ export default function App() {
             </button>
 
             <button
-              onClick={() => setActiveModule("projects")}
+              onClick={() => { setActiveModule("projects"); setIsMobileMenuOpen(false); }}
               className={`w-full flex items-center justify-between py-2 px-3 rounded-lg transition text-right text-xs font-sans border-r-4 ${
                 activeModule === "projects" ? "bg-indigo-600 text-white font-bold" : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
               }`}
@@ -771,7 +784,7 @@ export default function App() {
             </button>
 
             <button
-              onClick={() => setActiveModule("academy")}
+              onClick={() => { setActiveModule("academy"); setIsMobileMenuOpen(false); }}
               className={`w-full flex items-center justify-between py-2 px-3 rounded-lg transition text-right text-xs font-sans border-r-4 ${
                 activeModule === "academy" ? "bg-indigo-600 text-white font-bold" : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
               }`}
@@ -781,7 +794,7 @@ export default function App() {
             </button>
 
             <button
-              onClick={() => setActiveModule("finance")}
+              onClick={() => { setActiveModule("finance"); setIsMobileMenuOpen(false); }}
               className={`w-full flex items-center justify-between py-2 px-3 rounded-lg transition text-right text-xs font-sans border-r-4 ${
                 activeModule === "finance" ? "bg-indigo-600 text-white font-bold" : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
               }`}
@@ -791,7 +804,7 @@ export default function App() {
             </button>
 
             <button
-              onClick={() => setActiveModule("crm")}
+              onClick={() => { setActiveModule("crm"); setIsMobileMenuOpen(false); }}
               className={`w-full flex items-center justify-between py-2 px-3 rounded-lg transition text-right text-xs font-sans border-r-4 ${
                 activeModule === "crm" ? "bg-indigo-600 text-white font-bold" : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
               }`}
@@ -801,7 +814,7 @@ export default function App() {
             </button>
 
             <button
-              onClick={() => setActiveModule("ai")}
+              onClick={() => { setActiveModule("ai"); setIsMobileMenuOpen(false); }}
               className={`w-full flex items-center justify-between py-2 px-3 rounded-lg transition text-right text-xs font-sans border-r-4 ${
                 activeModule === "ai" ? "bg-indigo-600 text-white font-bold" : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
               }`}
@@ -811,7 +824,7 @@ export default function App() {
             </button>
 
             <button
-              onClick={() => setActiveModule("settings")}
+              onClick={() => { setActiveModule("settings"); setIsMobileMenuOpen(false); }}
               className={`w-full flex items-center justify-between py-2 px-3 rounded-lg transition text-right text-xs font-sans border-r-4 ${
                 activeModule === "settings" ? "bg-indigo-600 text-white font-bold" : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
               }`}
@@ -1136,7 +1149,7 @@ export default function App() {
                           <span className="text-[10px] text-slate-400 font-mono">سجل في: {att.clockIn}</span>
                           <div>
                             <span className="font-bold text-[#4c1d95]">{matched?.name || "موظف متميز"}</span>
-                            <div className="text-[9px] text-slate-505 mt-0.5">خط العرض: {att.latitude?.toFixed(4)} | خط الطول: {att.longitude?.toFixed(4)}</div>
+                            <div className="text-[9px] text-slate-555 mt-0.5">خط العرض: {att.latitude?.toFixed(4)} | خط الطول: {att.longitude?.toFixed(4)}</div>
                           </div>
                         </div>
                       );
