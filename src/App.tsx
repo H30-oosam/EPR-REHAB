@@ -68,12 +68,23 @@ export default function App() {
   const [loginError, setLoginError] = useState<string | null>(null);
   const [rememberMe, setRememberMe] = useState(true);
 
+  // حالات استعادة رمز الدخول PIN الجديدة للتحقق بالرقم
+  const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);
+  const [recoveryStep, setRecoveryStep] = useState(1);
+  const [inputVerificationCode, setInputVerificationCode] = useState("");
+  const [newPasswordInput, setNewPasswordInput] = useState("");
+  const [recoveryMessage, setRecoveryMessage] = useState<string | null>(null);
+  
+  // بيانات حساب الأدمن المحدثة والمطلوبة
+  const [adminEmail, setAdminEmail] = useState("admin@hossam.com");
+  const [adminPassword, setAdminPassword] = useState("@Hos1321994");
+
   // Simulation Role Context
   const [currentUser, setCurrentUser] = useState<User>({
     id: "u-1",
     name: "حسام الورداني",
-    email: "admin@erp.com",
-    phone: "+20100000001",
+    email: "admin@hossam.com",
+    phone: "+201200716861",
     role: "admin",
     avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150",
     customPermissions: ["all"]
@@ -125,8 +136,13 @@ export default function App() {
               setCurrentUser(fresh);
               setIsLoggedIn(true);
             } else if (parsed) {
-              setCurrentUser(parsed);
-              setIsLoggedIn(true);
+              if (parsed.email === adminEmail) {
+                setCurrentUser(parsed);
+                setIsLoggedIn(true);
+              } else {
+                setCurrentUser(parsed);
+                setIsLoggedIn(true);
+              }
             }
           } catch (err) {
             console.error("Cache parsing error:", err);
@@ -146,6 +162,20 @@ export default function App() {
 
   // Simulator profile toggler
   const handleRoleToggle = (roleKey: string) => {
+    if (roleKey === "admin") {
+      setCurrentUser({
+        id: "u-1",
+        name: "حسام الورداني",
+        email: adminEmail,
+        phone: "+201200716861",
+        role: "admin",
+        avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150",
+        customPermissions: ["all"]
+      });
+      setClockInMessage(null);
+      return;
+    }
+
     const matched = users.find(u => u.role === roleKey);
     if (matched) {
       setCurrentUser(matched);
@@ -214,6 +244,38 @@ export default function App() {
     }
   };
 
+  // دالة طلب كود استعادة الباسورد المشفر للرقم
+  const handleRequestRecoveryCode = () => {
+    setRecoveryMessage("جاري تشفير وإرسال كود التحقق OTP إلى الرقم 01200716861...");
+    setTimeout(() => {
+      setRecoveryStep(2);
+      setRecoveryMessage("تم إرسال كود التحقق بنجاح! (للتجربة الكود هو: 1321)");
+    }, 1500);
+  };
+
+  // دالة تأكيد الكود وتعيين الباسورد الجديد
+  const handleVerifyAndChangePassword = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (inputVerificationCode !== "1321") {
+      setRecoveryMessage("عذراً، كود التحقق OTP المدخل غير صحيح. حاول مجدداً.");
+      return;
+    }
+    if (newPasswordInput.length < 6) {
+      setRecoveryMessage("يجب أن يتكون رمز الدخول PIN الجديد من 6 خانات أو أكثر.");
+      return;
+    }
+
+    setAdminPassword(newPasswordInput);
+    setRecoveryMessage("تم تحديث رمز الدخول PIN الخاص بالأدمن بنجاح! يمكنك التسجيل الآن.");
+    setTimeout(() => {
+      setShowForgotPasswordModal(false);
+      setRecoveryStep(1);
+      setInputVerificationCode("");
+      setNewPasswordInput("");
+      setRecoveryMessage(null);
+    }, 2000);
+  };
+
   if (isInitializing) {
     return (
       <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center gap-4 text-slate-100">
@@ -234,25 +296,45 @@ export default function App() {
     setLoginError(null);
 
     const emailInput = loginEmail.trim().toLowerCase();
-    const matched = users.find(u => u.email.toLowerCase().trim() === emailInput || u.phone === emailInput);
-    if (!matched) {
-      setLoginError("البريد الإلكتروني أو الهوية المدخلة غير مسجلة كحساب موظف معتمد");
-      return;
-    }
 
-    const correctPassword = matched.password || "123456";
-    if (loginPassword !== correctPassword && loginPassword !== matched.phone) {
-      setLoginError("رمز الدخول PIN المدخل غير صحيح لهذا الملف الشخصي.");
-      return;
-    }
-
-    setCurrentUser(matched);
-    setIsLoggedIn(true);
-    setClockInMessage(null);
-    if (rememberMe) {
-      localStorage.setItem("erp_logged_in_user", JSON.stringify(matched));
+    // فحص التحقق من بيانات الأدمن المحدثة والمطلوبة بالشرط المباشر
+    if (emailInput === adminEmail.toLowerCase() && loginPassword === adminPassword) {
+      const adminProfile = {
+        id: "u-1",
+        name: "حسام الورداني",
+        email: adminEmail,
+        phone: "+201200716861",
+        role: "admin",
+        avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150",
+        customPermissions: ["all"]
+      };
+      
+      setCurrentUser(adminProfile);
+      setIsLoggedIn(true);
+      setClockInMessage(null);
+      if (rememberMe) {
+        localStorage.setItem("erp_logged_in_user", JSON.stringify(adminProfile));
+      }
     } else {
-      localStorage.removeItem("erp_logged_in_user");
+      // التحقق من باقي الحسابات المتواجدة في الداتا بيز الافتراضية
+      const matched = users.find(u => u.email.toLowerCase().trim() === emailInput || u.phone === emailInput);
+      if (!matched) {
+        setLoginError("البريد الإلكتروني أو رمز الدخول PIN المدخل غير صحيح.");
+        return;
+      }
+
+      const correctPassword = matched.password || "123456";
+      if (loginPassword !== correctPassword && loginPassword !== matched.phone) {
+        setLoginError("رمز الدخول PIN المدخل غير صحيح لهذا الملف الشخصي.");
+        return;
+      }
+
+      setCurrentUser(matched);
+      setIsLoggedIn(true);
+      setClockInMessage(null);
+      if (rememberMe) {
+        localStorage.setItem("erp_logged_in_user", JSON.stringify(matched));
+      }
     }
   };
 
@@ -308,7 +390,7 @@ export default function App() {
           </div>
 
           <div className="text-[10px] text-slate-500 font-sans mt-auto">
-            جميع الحقوق محفوظة © للمهندس حسام الورداني 2026. مشغل بحماية سحابية مشفرة SSL.
+            جميع الحقوق محفوظة © للمستشار حسام الورداني 2026. مشغل بحماية سحابية مشفرة SSL.
           </div>
         </div>
 
@@ -380,7 +462,10 @@ export default function App() {
                   <span>تذكر جلسة الدخول على هذا المتصفح</span>
                 </label>
                 
-                <span className="text-slate-500 hover:text-indigo-400 cursor-pointer text-xs" onClick={() => alert("يرجى التواصل مع إدارة الموارد البشرية HR لتحديث أو استعادة رمز الدخول PIN الخاص بك.")}>
+                <span 
+                  className="text-slate-500 hover:text-indigo-400 cursor-pointer text-xs select-none" 
+                  onClick={() => setShowForgotPasswordModal(true)}
+                >
                   نسيت رمز الدخول؟
                 </span>
               </div>
@@ -393,9 +478,76 @@ export default function App() {
               </button>
             </form>
 
-
           </div>
         </div>
+
+        {/* واجهة استعادة كلمة المرور المنبثقة التفاعلية المضافة برقم الهاتف */}
+        {showForgotPasswordModal && (
+          <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6 text-right space-y-4 shadow-2xl">
+              <div className="flex justify-between items-center border-b border-slate-800 pb-3">
+                <button onClick={() => { setShowForgotPasswordModal(false); setRecoveryMessage(null); }} className="text-slate-400 hover:text-white bg-transparent border-none outline-none cursor-pointer text-sm">✕</button>
+                <h3 className="text-sm font-bold text-white font-sans">بوابة استعادة رمز الدخول الآمن للأدمن</h3>
+              </div>
+
+              {recoveryMessage && (
+                <div className="bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-[11px] p-3 rounded-xl leading-relaxed">
+                  {recoveryMessage}
+                </div>
+              )}
+
+              {recoveryStep === 1 ? (
+                <div className="space-y-4">
+                  <p className="text-xs text-slate-400 leading-relaxed font-sans">
+                    لاستعادة حساب الأدمن المربوط بالبريد <span className="text-indigo-400 font-mono font-bold">admin@hossam.com</span>، سيقوم النظام تلقائياً بإرسال كود تحقق مشفر ومؤمن برقم الهاتف الموثق للمستشار.
+                  </p>
+                  <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 text-center">
+                    <span className="text-slate-500 text-[10px] block">رقم الهاتف المعتمد للإرسال</span>
+                    <span className="text-sm font-mono font-bold text-slate-200 tracking-wider">01200716861</span>
+                  </div>
+                  <button
+                    onClick={handleRequestRecoveryCode}
+                    className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs py-2.5 rounded-xl cursor-pointer border-none outline-none"
+                  >
+                    إرسال كود التحقق OTP الآن
+                  </button>
+                </div>
+              ) : (
+                <form onSubmit={handleVerifyAndChangePassword} className="space-y-4 font-sans">
+                  <div>
+                    <label className="block text-slate-300 font-bold mb-1.5 text-xs">أدخل كود التحقق المكون من 4 أرقام المرسل لهاتفك</label>
+                    <input
+                      required
+                      type="text"
+                      maxLength={4}
+                      placeholder="1321"
+                      value={inputVerificationCode}
+                      onChange={e => setInputVerificationCode(e.target.value)}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl py-2 px-3 text-slate-200 font-mono text-center text-sm tracking-widest outline-none focus:border-indigo-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-slate-300 font-bold mb-1.5 text-xs">اكتب رمز الدخول PIN الجديد للـ ERP</label>
+                    <input
+                      required
+                      type="password"
+                      placeholder="••••••"
+                      value={newPasswordInput}
+                      onChange={e => setNewPasswordInput(e.target.value)}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl py-2 px-3 text-slate-200 font-mono text-center text-sm tracking-widest outline-none focus:border-indigo-500"
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs py-2.5 rounded-xl cursor-pointer border-none outline-none"
+                  >
+                    تأكيد الكود وتحديث الباسورد الجديد
+                  </button>
+                </form>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -422,7 +574,7 @@ export default function App() {
     { name: "10/06", sales: 1500, realEstate: 900, cairoStore: 1000, wholesale: 350 },
     { name: "15/06", sales: 3100, realEstate: 2400, cairoStore: 1800, wholesale: 600 },
     { name: "20/06", sales: 2200, realEstate: 1500, cairoStore: 1400, wholesale: 500 },
-    { name: "24/06", sales: 3400, realEstate: 2900, cairoStore: 2100, wholesale: 1200 }, // Peak matching screenshot date 24th!
+    { name: "24/06", sales: 3400, realEstate: 2900, cairoStore: 2100, wholesale: 1200 },
     { name: "28/06", sales: 2800, realEstate: 2100, cairoStore: 1600, wholesale: 950 },
     { name: "30/06", sales: 2950, realEstate: 2250, cairoStore: 1850, wholesale: 1050 },
   ];
@@ -459,7 +611,7 @@ export default function App() {
             {/* Today Date Badge with Calendar Icon */}
             <div className="bg-[#5a2ca6] border border-white/15 rounded-xl px-3 py-2 text-xs font-sans text-white flex items-center gap-1.5 font-bold shadow-sm">
               <CalendarDays className="w-3.5 h-3.5 text-purple-200" />
-              <span>06/24/2024</span>
+              <span>06/24/2026</span>
             </div>
           </div>
 
