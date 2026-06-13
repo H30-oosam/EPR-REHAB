@@ -28,10 +28,11 @@ export async function fetchERPData() {
     const { data: erpData, error } = await supabase
       .from("erp_metadata")
       .select("*")
+      .eq("id", 1)
       .single();
 
     if (error) {
-      console.warn("جدول erp_metadata غير موجود حالياً، يتم تحميل هيكل البيانات الاحتياطي.");
+      console.warn("جدول erp_metadata فارغ أو غير موجود حالياً، يتم تحميل هيكل البيانات الاحتياطي.");
       return getFallbackMockStructure();
     }
 
@@ -42,7 +43,7 @@ export async function fetchERPData() {
   }
 }
 
-// 2. الموزع العالمي لتحديث ومزامنة مجمعات الـ ERP
+// 2. الموزع العالمي المحدث لتحديث ومزامنة مجمعات الـ ERP بمرونة التأسيس التلقائي
 export async function syncERPCollection(
   collectionName: string,
   items: any[],
@@ -51,22 +52,35 @@ export async function syncERPCollection(
   actionLogText: string
 ) {
   try {
-    const currentData = await fetchERPData();
-    const updatedPayload = {
-      ...currentData,
-      [collectionName]: items
-    };
-
     if (!supabaseUrl || !supabaseAnonKey) {
       return true; // محاكاة النجاح محلياً لحماية الواجهة من التوقف
     }
 
+    // جلب البيانات الحالية الآمن بمرونة تمنع التوقف إذا كان السجل فارغاً
+    const { data: erpData } = await supabase
+      .from("erp_metadata")
+      .select("*")
+      .eq("id", 1)
+      .single();
+
+    const currentPayload = erpData?.payload || getFallbackMockStructure();
+    const updatedPayload = {
+      ...currentPayload,
+      [collectionName]: items
+    };
+
+    // حفظ أو إنشاء السجل رقم 1 مباشرة دون شروط مسبقة لمنع خطأ حفظ البيانات
     const { error } = await supabase
       .from("erp_metadata")
-      .upsert({ id: 1, payload: updatedPayload, updated_at: new Date().toISOString() });
+      .upsert({ 
+        id: 1, 
+        payload: updatedPayload, 
+        updated_at: new Date().toISOString() 
+      }, { onConflict: 'id' });
 
     if (error) throw error;
 
+    // توثيق العملية بجدول التدقيق الآمن للعمليات المحدثة
     await supabase.from("audit_logs").insert({
       user_id: userId,
       user_name: userName,
