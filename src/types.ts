@@ -18,6 +18,9 @@ export interface User {
   role: UserRole;
   avatar?: string;
   customPermissions: string[];
+  password?: string;
+  baseSalary?: number;
+  hireDate?: string;
 }
 
 export interface LogEntry {

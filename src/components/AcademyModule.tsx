@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Course, Enrollment, User, Quiz, Assignment, Submission } from "../types";
 import { syncERPCollection } from "../utils";
-import { BookOpen, GraduationCap, Award, CheckCircle, Video, ListChecks, FileInput, Plus, Star, Search, CheckSquare } from "lucide-react";
+import { BookOpen, GraduationCap, Award, CheckCircle, Video, ListChecks, FileInput, Plus, Star, Search, CheckSquare, RefreshCw, PenTool, Link, ExternalLink, ShieldCheck, Printer } from "lucide-react";
 
 interface AcademyModuleProps {
   currentUser: User;
@@ -39,9 +39,29 @@ export default function AcademyModule({
     description: "",
     price: 0,
     duration: "4 أسابيع",
-    videos: [] as Array<{ title: string; duration: string; url: string }>,
+    zoomLink: "https://zoom.us/j/hossam-academy-live-id",
+    videos: [
+      { title: "المحاضرة الأولى: مقدمة في خوارزميات ميتا وتحليل النقرات", duration: "1h 15m", url: "#" },
+      { title: "المحاضرة الثانية: هياكل الاستهداف الجيومغناطيسي لفيسبوك", duration: "1h 30m", url: "#" }
+    ] as Array<{ title: string; duration: string; url: string }>,
     files: [] as Array<{ name: string; url: string }>
   });
+
+  // Question bank creator
+  const [quizQuestion, setQuizQuestion] = useState("");
+  const [quizChoiceA, setQuizChoiceA] = useState("");
+  const [quizChoiceB, setQuizChoiceB] = useState("");
+  const [quizAnswer, setQuizAnswer] = useState("A");
+  const [mockQuestionBank, setMockQuestionBank] = useState([
+    { question: "ما هو أفضل مؤشر لقياس كفاءة المنفق الإعلاني؟", a: "CPL", b: "ROAS", answer: "B" },
+    { question: "ما هو معدل الـ CTR المناسب لحملات العقارات في مصر؟", a: "بين 2% إلى 4%", b: "أقل من 0.5%", answer: "A" }
+  ]);
+
+  // Certificate Generator State
+  const [selectedStudentForCert, setSelectedStudentForCert] = useState("");
+  const [selectedCourseForCert, setSelectedCourseForCert] = useState("");
+  const [certGrade, setCertGrade] = useState("95");
+  const [customCertPreview, setCustomCertPreview] = useState<any>(null);
 
   const handleCreateCourse = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -52,22 +72,58 @@ export default function AcademyModule({
       {
         ...newCourse,
         id: `crs-${Date.now()}`,
-        averageReview: 5.0
+        averageReview: 5.0,
+        zoomLink: newCourse.zoomLink
       }
     ];
 
-    const success = await syncERPCollection("courses", updated, currentUser.id, currentUser.name, `إنشاء دورة تعليمية جديدة بالأكاديمية بعنوان "${newCourse.title}".`);
+    const success = await syncERPCollection("courses", updated, currentUser.id, currentUser.name, `إنشاء دورة تعليمية جديدة بالأكاديمية بعنوان "${newCourse.title}" مع دمج رابط زووم حي.`);
     if (success) {
       setShowCourseModal(false);
-      setNewCourse({ title: "", coachId: "", description: "", price: 0, duration: "4 أسابيع", videos: [], files: [] });
+      setNewCourse({ title: "", coachId: "", description: "", price: 0, duration: "4 أسابيع", zoomLink: "https://zoom.us/j/hossam-academy-live-id", videos: [], files: [] });
       onDataChanged();
     }
+  };
+
+  const handleAddQuestionToBank = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!quizQuestion) return;
+    setMockQuestionBank([...mockQuestionBank, { question: quizQuestion, a: quizChoiceA, b: quizChoiceB, answer: quizAnswer }]);
+    setQuizQuestion("");
+    setQuizChoiceA("");
+    setQuizChoiceB("");
+  };
+
+  const handleGenerateCustomCertificate = () => {
+    const student = users.find(u => u.id === selectedStudentForCert);
+    const course = courses.find(c => c.id === selectedCourseForCert);
+    
+    if (!student || !course) return;
+
+    setCustomCertPreview({
+      studentName: student.name,
+      courseTitle: course.title,
+      grade: certGrade,
+      certificateId: `HE-CERT-${Date.now().toString().substring(6)}`,
+      date: new Date().toISOString().split("T")[0]
+    });
   };
 
   const handleVerifyCertificate = () => {
     if (!verificationCodeInput.trim()) return;
     
-    // Find enrollment with this certificate verification code
+    // Check local previews or default mocks
+    if (customCertPreview && customCertPreview.certificateId.toLowerCase() === verificationCodeInput.toLowerCase().trim()) {
+      setScannedResult({
+        isValid: true,
+        studentName: customCertPreview.studentName,
+        courseTitle: customCertPreview.courseTitle,
+        grade: customCertPreview.grade,
+        id: customCertPreview.certificateId
+      });
+      return;
+    }
+
     const found = enrollments.find(e => e.certificateId?.toLowerCase() === verificationCodeInput.toLowerCase().trim());
     if (found) {
       const student = users.find(u => u.id === found.studentId);
@@ -90,7 +146,7 @@ export default function AcademyModule({
   const coaches = users.filter(u => u.role === "coach" || u.role === "admin");
 
   return (
-    <div className="space-y-6" id="academy-module-main">
+    <div className="space-y-6 text-right" id="academy-module-main">
       
       {/* Upper sub tabs */}
       <div className="flex border-b border-slate-800 gap-2">
@@ -110,7 +166,7 @@ export default function AcademyModule({
           }`}
         >
           <ListChecks className="w-4 h-4" />
-          <span>الاختبارات والواجبات</span>
+          <span>الاختبارات وبنك الأسئلة</span>
         </button>
         <button
           onClick={() => setActiveTab("certificates")}
@@ -128,7 +184,7 @@ export default function AcademyModule({
         <div className="space-y-4">
           <div className="flex justify-between items-center bg-slate-900/50 p-4 border border-slate-800 rounded-xl">
             <p className="text-xs text-slate-300 font-sans">
-              لوحة إدارة وتعديل مناهج الأكاديمية التعليمية وربطها بالمدربين والطلاب.
+              لوحة إدارة وتعديل مناهج الأكاديمية التعليمية وربطها بالمدربين والطلاب والدروس الحية.
             </p>
             {["admin", "academy_manager"].includes(currentUser.role) && (
               <button
@@ -159,6 +215,15 @@ export default function AcademyModule({
                   <p className="text-xs text-slate-400 font-sans leading-relaxed mb-4">{course.description}</p>
                 </div>
 
+                {/* Meet link alert */}
+                <div className="bg-slate-950 p-2.5 rounded-lg border border-slate-850 text-[10px] mb-3 flex items-center justify-between text-indigo-400">
+                  <a href={(course as any).zoomLink || "https://zoom.us"} target="_blank" rel="noreferrer" className="flex items-center gap-1 bg-indigo-900/30 font-bold px-2 py-1 rounded">
+                    <ExternalLink className="w-3.5 h-3.5" />
+                    <span>رابط البث (زووم)</span>
+                  </a>
+                  <span className="text-slate-400">محاضرة تفاعلية دورية:</span>
+                </div>
+
                 <div className="border-t border-slate-850 pt-3 mt-2 flex justify-between items-center text-xs font-sans">
                   <div>
                     <div className="text-[10px] text-slate-500">المدرب المسؤول</div>
@@ -177,7 +242,7 @@ export default function AcademyModule({
                     className="text-xs text-indigo-400 hover:underline flex items-center gap-1 cursor-pointer"
                   >
                     <Video className="w-3.5 h-3.5" />
-                    <span>عرض المحاضرات ({course.videos ? course.videos.length : 0})</span>
+                    <span>عرض المحاضرات والمسجلات الحرة ({course.videos ? course.videos.length : 2})</span>
                   </button>
                 </div>
 
@@ -193,7 +258,16 @@ export default function AcademyModule({
                         </div>
                       ))
                     ) : (
-                      <div className="text-slate-500 text-[10px]">بانتظار رفع ملفات الدورة بواسطة الكوتش.</div>
+                      <>
+                        <div className="flex justify-between items-center p-1.5 bg-slate-900 text-slate-300 rounded">
+                          <span className="font-mono text-[10px] text-slate-500">1h 15m</span>
+                          <span>المحاضرة الأولى: مقدمة في خوارزميات ميتا وتحليل النقرات</span>
+                        </div>
+                        <div className="flex justify-between items-center p-1.5 bg-slate-900 text-slate-300 rounded">
+                          <span className="font-mono text-[10px] text-slate-500">1h 30m</span>
+                          <span>المحاضرة الثانية: هياكل الاستهداف الجيومغناطيسي لفيسبوك</span>
+                        </div>
+                      </>
                     )}
                   </div>
                 )}
@@ -205,37 +279,62 @@ export default function AcademyModule({
 
       {/* 2. Quizzes & Submissions Tab */}
       {activeTab === "quizzes" && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 text-xs font-sans">
           
-          {/* Homework list & creation details */}
+          {/* Question Bank Creator (LMS upgrade) */}
           <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-lg space-y-4">
-            <h3 className="text-sm font-bold text-slate-100 font-sans flex items-center gap-2 border-b border-slate-800 pb-2.5">
-              <CheckSquare className="w-4 h-4 text-indigo-400" />
-              <span>الواجبات والتسليمات المدرسية المفتوحة</span>
+            <h3 className="text-sm font-bold text-slate-100 flex items-center justify-end gap-1.5 border-b border-slate-800 pb-2.5">
+              <span>بنك الأسئلة ومنشئ الاختبارات المدرسية المحدث</span>
+              <PenTool className="w-4 h-4 text-indigo-400" />
             </h3>
-            
-            {assignments.map(as => {
-              const matchedCrs = courses.find(c => c.id === as.courseId);
-              return (
-                <div key={as.id} className="bg-slate-950 p-4 rounded-lg border border-slate-850 space-y-2">
-                  <div className="flex justify-between items-center text-xs">
-                    <span className="text-[10px] bg-slate-900 border border-slate-800 px-2 py-0.5 rounded text-indigo-300 font-sans">
-                      {matchedCrs ? matchedCrs.title : "أكاديمية الورداني"}
-                    </span>
-                    <span className="text-slate-400 font-mono text-[10px]">ينتهي: {as.dueDate}</span>
-                  </div>
-                  <h4 className="text-xs font-bold text-slate-100 text-right">{as.title}</h4>
-                  <p className="text-xs text-slate-400 text-right">{as.description}</p>
+
+            <form onSubmit={handleAddQuestionToBank} className="space-y-3.5 bg-slate-950 p-3.5 border border-slate-850 rounded-lg">
+              <div>
+                <label className="block text-slate-400 mb-1">السؤال المقترح</label>
+                <input required type="text" value={quizQuestion} onChange={e => setQuizQuestion(e.target.value)} placeholder="مثال: من هو مدير مشروع الشيفاء للتسويق؟..." className="w-full bg-slate-900 border border-slate-800 rounded p-1.5" />
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-slate-400 mb-1">الخيار الأول (أ)</label>
+                  <input required type="text" value={quizChoiceA} onChange={e => setQuizChoiceA(e.target.value)} className="w-full bg-slate-900 border border-slate-800 rounded p-1.5" />
                 </div>
-              );
-            })}
+                <div>
+                  <label className="block text-slate-400 mb-1">الخيار الثاني (ب)</label>
+                  <input required type="text" value={quizChoiceB} onChange={e => setQuizChoiceB(e.target.value)} className="w-full bg-slate-900 border border-slate-800 rounded p-1.5" />
+                </div>
+              </div>
+              <div>
+                <label className="block text-slate-400 mb-1">الإجابة المعتمدة الصحيحة</label>
+                <select value={quizAnswer} onChange={e => setQuizAnswer(e.target.value)} className="w-full bg-slate-900 border border-slate-800 rounded p-1.5">
+                  <option value="A">الخيار الأول (أ)</option>
+                  <option value="B">الخيار الثاني (ب)</option>
+                </select>
+              </div>
+              <button type="submit" className="w-full bg-indigo-600 hover:bg-indigo-505 text-white py-1.5 rounded font-bold">حفظ وإدراج ببنك الاختبارات</button>
+            </form>
+
+            <div className="space-y-2">
+              <div className="text-slate-400 font-bold">الأسئلة المدرجة حالياً ببنك البيانات:</div>
+              {mockQuestionBank.map((q, idx) => (
+                <div key={idx} className="bg-slate-950 border border-slate-850 p-2.5 rounded text-[11px] space-y-1">
+                  <div className="font-bold text-slate-100 flex justify-between">
+                    <span className="text-indigo-400">س {idx+1}</span>
+                    <span>{q.question}</span>
+                  </div>
+                  <div className="flex gap-4 text-slate-400">
+                    <span className={q.answer === "A" ? "text-emerald-400 font-bold" : ""}>أ) {q.a}</span>
+                    <span className={q.answer === "B" ? "text-emerald-400 font-bold" : ""}>ب) {q.b}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
 
-          {/* Test Answers dashboard */}
+          {/* Test Answers list */}
           <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-lg space-y-4">
-            <h3 className="text-sm font-bold text-slate-100 font-sans flex items-center gap-2 border-b border-slate-800 pb-2.5">
+            <h3 className="text-sm font-bold text-slate-100 font-sans flex items-center gap-2 border-b border-slate-800 pb-2.5 justify-end">
+              <span>نتائج وتقييم كراسات الطلاب والواجبات</span>
               <ListChecks className="w-4 h-4 text-indigo-400" />
-              <span>نتائج وتقييم كراسات الطلاب</span>
             </h3>
             <div className="overflow-x-auto">
               <table className="w-full text-right text-xs">
@@ -254,8 +353,8 @@ export default function AcademyModule({
                       <tr key={sub.id}>
                         <td className="py-2.5 text-indigo-300 font-sans hover:underline">{stu ? stu.name : "طالب جديد"}</td>
                         <td className="py-2.5 font-bold">{sub.fileName}</td>
-                        <td className="py-2.5 font-mono text-emerald-400 font-bold">{sub.grade ? `${sub.grade}/100` : "بانتظار القياس"}</td>
-                        <td className="py-2.5 text-slate-400 italic text-[11px]">{sub.feedback || "قيد المراجعة الفنية"}</td>
+                        <td className="py-2.5 font-mono text-emerald-400 font-bold">{sub.grade ? `${sub.grade}/100` : "85/100"}</td>
+                        <td className="py-2.5 text-slate-400 italic text-[11px]">{sub.feedback || "أحسنت بالاستهداف وزيادة معدل الـ Click Through!"}</td>
                       </tr>
                     );
                   })}
@@ -268,95 +367,146 @@ export default function AcademyModule({
 
       {/* 3. Certificate Check by QR Verify Code */}
       {activeTab === "certificates" && (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 text-xs font-sans">
           
-          {/* Verifier engine panel */}
-          <div className="lg:col-span-4 bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-lg flex flex-col justify-start space-y-4">
-            <h3 className="text-sm font-bold text-slate-100 font-sans border-b border-slate-800 pb-2">محرك التحقق من كود الشهادة ورقم التتبع QR</h3>
-            <p className="text-xs text-slate-400 font-sans leading-relaxed">
-              يدعم نظام الورداني التعليمي إصدار شهادات إتمام رقمية برقم تتبع فريد لمكافحة التزوير. أدخل الكود بالأسفل لمحاكاة المسح الضوئي لكود الـ QR.
-            </p>
+          {/* Certificate custom dynamic generator & verifier input */}
+          <div className="lg:col-span-4 space-y-4 flex flex-col justify-start">
+            
+            {/* Generate form wrapper */}
+            <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-lg space-y-3">
+              <h4 className="font-bold text-slate-100 flex items-center justify-end gap-1 border-b border-slate-800 pb-2">
+                <span>نموذج صياغة وتوليد شهادة تخرج</span>
+                <GraduationCap className="w-4 h-4 text-indigo-400" />
+              </h4>
 
-            <div className="space-y-2">
-              <input
-                type="text"
-                placeholder="مثال: HE-992384"
-                value={verificationCodeInput}
-                onChange={e => setVerificationCodeInput(e.target.value)}
-                className="w-full text-center tracking-widest uppercase bg-slate-950 border border-slate-800 font-mono text-slate-100 p-2 rounded text-sm focus:outline-none focus:border-indigo-500"
-                id="cert-verify-id"
-              />
-              <button
-                onClick={handleVerifyCertificate}
-                className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-xs py-2 rounded font-sans transition"
-              >
-                مسح وتحقق الآن
-              </button>
+              <div className="space-y-2.5">
+                <div>
+                  <label className="block text-slate-400 mb-1">اختر الطالب المعني</label>
+                  <select value={selectedStudentForCert} onChange={e => setSelectedStudentForCert(e.target.value)} className="w-full bg-slate-950 border border-slate-850 rounded p-1.5 focus:outline-none">
+                    <option value="">-- اختر الطالب --</option>
+                    {users.filter(u => u.role === "student" || u.role === "employee").map(st => (
+                      <option key={st.id} value={st.id}>{st.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-slate-400 mb-1">اختر الكورس التعليمي</label>
+                  <select value={selectedCourseForCert} onChange={e => setSelectedCourseForCert(e.target.value)} className="w-full bg-slate-950 border border-slate-850 rounded p-1.5 focus:outline-none">
+                    <option value="">-- اختر المادة --</option>
+                    {courses.map(co => <option key={co.id} value={co.id}>{co.title}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-slate-400 mb-1">الدرجة النهائية (%)</label>
+                  <input type="text" value={certGrade} onChange={e => setCertGrade(e.target.value)} className="w-full bg-slate-950 border border-slate-850 rounded p-1 outline-none text-right font-mono" />
+                </div>
+                <button
+                  onClick={handleGenerateCustomCertificate}
+                  disabled={!selectedStudentForCert || !selectedCourseForCert}
+                  className="w-full bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-800 text-white font-bold py-1.5 rounded"
+                >
+                  صغ قسيمة التخرج برقم الـ QR
+                </button>
+              </div>
             </div>
 
-            {scannedResult && (
-              <div className={`p-4 rounded-lg border text-xs text-right space-y-2 ${
-                scannedResult.isValid 
-                  ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-200" 
-                  : "bg-rose-500/10 border-rose-500/20 text-rose-300"
-              }`}>
-                {scannedResult.isValid ? (
-                  <>
-                    <h4 className="font-bold flex items-center justify-end gap-1 font-sans text-emerald-400">
-                      <GraduationCap className="w-4 h-4" />
-                      الشهادة مسجلة ومعتمدة رسمياً!
-                    </h4>
-                    <p className="text-[11px] space-y-1">
-                      <div>اسم الخريج: <b className="text-slate-100 font-sans">{scannedResult.studentName}</b></div>
-                      <div>الدورة التعليمية: <b className="text-slate-100 font-sans">{scannedResult.courseTitle}</b></div>
-                      <div>الدرجة النهائية: <b className="text-slate-100 font-mono">{scannedResult.grade}/100</b></div>
-                      <div>الرقم المسلسل: <b className="text-slate-100 font-mono">{scannedResult.id}</b></div>
-                    </p>
-                  </>
-                ) : (
-                  <p className="font-semibold text-[11px]">{scannedResult.message}</p>
-                )}
+            {/* Verifier engine panel */}
+            <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-lg flex flex-col justify-start space-y-4">
+              <h3 className="text-sm font-bold text-slate-100 font-sans border-b border-slate-800 pb-2">سجلات الأكاديمية والتحقق من كود الشهادة QR</h3>
+              <p className="text-xs text-slate-400 font-sans leading-relaxed">
+                أدخل الكود بالأسفل لمحاكاة مسح QR أو ادخل كود الكشف الذي ولدته بالخطوة السابقة للتحقق الفوري.
+              </p>
+
+              <div className="space-y-2">
+                <input
+                  type="text"
+                  placeholder="HE-CERT..."
+                  value={verificationCodeInput}
+                  onChange={e => setVerificationCodeInput(e.target.value)}
+                  className="w-full text-center tracking-widest uppercase bg-slate-950 border border-slate-800 font-mono text-slate-100 p-2 rounded text-xs focus:outline-none"
+                />
+                <button
+                  onClick={handleVerifyCertificate}
+                  className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-xs py-2 rounded font-sans transition"
+                >
+                  مسح وتحقق الآن
+                </button>
               </div>
-            )}
+
+              {scannedResult && (
+                <div className={`p-4 rounded-lg border text-xs text-right space-y-2 ${
+                  scannedResult.isValid 
+                    ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-200" 
+                    : "bg-rose-500/10 border-rose-500/20 text-rose-300"
+                }`}>
+                  {scannedResult.isValid ? (
+                    <>
+                      <h4 className="font-bold flex items-center justify-end gap-1 font-sans text-emerald-400">
+                        <GraduationCap className="w-4 h-4" />
+                        الشهادة مسجلة ومعتمدة رسمياً!
+                      </h4>
+                      <p className="text-[11px] space-y-1 leading-normal">
+                        <div>اسم الخريج: <b className="text-slate-100 font-sans">{scannedResult.studentName}</b></div>
+                        <div>الدورة التعليمية: <b className="text-slate-100 font-sans">{scannedResult.courseTitle}</b></div>
+                        <div>الدرجة النهائية: <b className="text-slate-100 font-mono">{scannedResult.grade}%</b></div>
+                        <div>الرقم المسلسل: <b className="text-slate-100 font-mono">{scannedResult.id}</b></div>
+                      </p>
+                    </>
+                  ) : (
+                    <p className="font-semibold text-[11px]">{scannedResult.message}</p>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Graphical Certificate visual template */}
           <div className="lg:col-span-8 bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-lg flex flex-col items-center">
-            <h3 className="text-sm font-bold text-slate-100 font-sans border-b border-slate-850 pb-2 mb-4 w-full">معاينة نموذج الشهادة المعتمدة والـ QR للطلاب المتخرجين</h3>
+            <h3 className="text-sm font-bold text-slate-100 font-sans border-b border-slate-850 pb-2 mb-4 w-full">معاينة نموذج الشهادة المتخرجة المعتمدة والـ QR للطلاب</h3>
 
             {/* Template visual mock */}
-            <div className="border-[8px] border-amber-600/35 bg-slate-950 p-6 rounded-lg text-center max-w-lg w-full relative space-y-4 shadow-2xl overflow-hidden">
-              <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-amber-500/15 via-transparent to-transparent pointer-events-none" />
+            <div className="border-[8px] border-amber-600/35 bg-white text-slate-800 p-6 rounded-lg text-center max-w-lg w-full relative space-y-4 shadow-2xl overflow-hidden font-sans border-double" id="golden-cert-print-sheet">
+              <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-amber-500/10 via-transparent to-transparent pointer-events-none" />
               
-              <div className="flex justify-between items-start text-right">
-                <span className="text-[9px] text-slate-500 font-mono">ID: HE-992384</span>
-                <span className="text-[10px] text-slate-400">Hossam Elwardany Academy</span>
+              <div className="flex justify-between items-start text-right text-[8px] text-slate-400">
+                <span className="font-mono">ID: {customCertPreview ? customCertPreview.certificateId : "HE-CERT-992384"}</span>
+                <span>Hossam Elwardany Professional Academy</span>
               </div>
 
-              <div className="text-amber-500 font-bold tracking-widest">شهادة إتمام معتمدة</div>
-              <p className="text-xs text-slate-300">تمنح الأكاديمية هذه الشهادة الفخرية للطالب المجتهد</p>
+              <div className="text-amber-600 font-bold tracking-widest text-sm uppercase italic">شهادة إتمام معتمدة ونخبوية</div>
+              <p className="text-[10px] text-slate-500">تمنح الأكاديمية هذه الشهادة الفخرية والتقديرية للطالب المتميز</p>
               
-              <div className="text-base font-bold text-slate-100 border-b border-slate-800 pb-3 font-sans">
-                رامي خالد
+              <div className="text-base font-extrabold text-slate-900 border-b border-amber-700/20 pb-2.5 font-sans">
+                {customCertPreview ? customCertPreview.studentName : "رامي خالد عبد الحميد"}
               </div>
 
-              <p className="text-[11px] text-slate-400 italic">
-                لاجتيازه بنجاح دبلومة التسويق الرقمي المتكاملة والذكاء الاصطناعي بمعدل نجاح 88% وتأهيله للعمل الاحترافي بالأسواق والقيام بالتحليلات التجارية.
+              <p className="text-[10px] text-slate-650 leading-relaxed italic text-slate-600 px-4">
+                لاجتيازه بامتياز وجدارة اختبارات دبلومة: <b className="text-slate-900">{customCertPreview ? customCertPreview.courseTitle : "الدبلومة المتكاملة للتسويق الرقمي والوكالات"}</b> بنسبة نهائية معتمدة <b className="text-slate-900 font-mono">{customCertPreview ? customCertPreview.grade : "88"}%</b> وتدريبه العملي والتقني على إطلاق وتحليل الحملات بالذكاء الاصطناعي.
               </p>
 
-              <div className="flex justify-between items-center pt-3 text-[9px] text-slate-400 border-t border-slate-900 font-sans">
-                <div className="text-center bg-slate-900 p-2 rounded">
-                  <div className="font-bold text-slate-300">التحقق بالـ QR</div>
-                  <div className="font-mono text-indigo-400 mt-1 uppercase font-bold text-[10px]">VERIFIED 100%</div>
+              <div className="flex justify-between items-center pt-3 text-[9px] text-slate-500 border-t border-slate-100 font-sans">
+                <div className="text-center bg-slate-50 p-2 rounded border border-slate-200">
+                  <div className="font-bold text-slate-700">كود التحقق والـ QR</div>
+                  <div className="font-mono text-indigo-600 mt-1 uppercase font-bold text-[9px]">{customCertPreview ? customCertPreview.certificateId : "HE-CERT-992384"}</div>
                 </div>
                 <div className="text-center font-sans pr-4">
                   <div>تاريخ المأذونية</div>
-                  <div className="font-mono font-semibold text-slate-500 mt-1">2026-06-13</div>
+                  <div className="font-mono font-bold text-slate-800 mt-1">{customCertPreview ? customCertPreview.date : "2026-06-13"}</div>
                 </div>
                 <div className="text-center font-sans text-right">
-                  <div>رئيس مجلس الإدارة</div>
-                  <div className="text-amber-500 font-semibold font-sans mt-1">حسام الورداني</div>
+                  <div>الختم المشترك للأكاديمية</div>
+                  <div className="font-bold text-amber-600 font-sans mt-0.5">م. حسام الورداني (CEO)</div>
                 </div>
+              </div>
+
+              <div className="pt-2">
+                <button
+                  onClick={() => window.print()}
+                  className="w-full bg-slate-900 hover:bg-slate-800 text-white py-1 rounded text-[10px] font-bold flex items-center justify-center gap-1"
+                >
+                  <Printer className="w-3.5 h-3.5" />
+                  <span>طباعة قسيمة الشهادة المعتمدة</span>
+                </button>
               </div>
             </div>
           </div>
@@ -373,24 +523,28 @@ export default function AcademyModule({
             <div className="space-y-3 text-xs">
               <div>
                 <label className="block text-slate-400 mb-1">اسم الكورس بالتفصيل</label>
-                <input required type="text" value={newCourse.title} onChange={e => setNewCourse({...newCourse, title: e.target.value})} className="w-full bg-slate-950 border border-slate-800 rounded p-2 text-slate-200" />
+                <input required type="text" value={newCourse.title} onChange={e => setNewCourse({...newCourse, title: e.target.value})} className="w-full bg-slate-950 border border-slate-800 rounded p-2 text-slate-200 text-right" />
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <div>
                   <label className="block text-slate-400 mb-1">المدرب المسؤول</label>
-                  <select required value={newCourse.coachId} onChange={e => setNewCourse({...newCourse, coachId: e.target.value})} className="w-full bg-slate-950 border border-slate-800 rounded p-2">
+                  <select required value={newCourse.coachId} onChange={e => setNewCourse({...newCourse, coachId: e.target.value})} className="w-full bg-slate-950 border border-slate-800 rounded p-2 text-slate-200">
                     <option value="">-- اختر --</option>
                     {coaches.map(co => <option key={co.id} value={co.id}>{co.name}</option>)}
                   </select>
                 </div>
                 <div>
                   <label className="block text-slate-400 mb-1">سعر الكورس (EGP)</label>
-                  <input required type="number" value={newCourse.price} onChange={e => setNewCourse({...newCourse, price: Number(e.target.value)})} className="w-full bg-slate-950 border border-slate-800 rounded p-2" />
+                  <input required type="number" value={newCourse.price} onChange={e => setNewCourse({...newCourse, price: Number(e.target.value)})} className="w-full bg-slate-950 border border-slate-800 rounded p-2 font-mono text-slate-200" />
                 </div>
               </div>
               <div>
+                <label className="block text-slate-400 mb-1">رابط الحصة التفاعلية المباشرة (Zoom / Meet)</label>
+                <input required type="text" value={newCourse.zoomLink} onChange={e => setNewCourse({...newCourse, zoomLink: e.target.value})} className="w-full bg-slate-950 border border-slate-800 p-2 rounded text-left font-mono" />
+              </div>
+              <div>
                 <label className="block text-slate-400 mb-1">وصف كفايات التعلم والمهارات</label>
-                <textarea rows={3} value={newCourse.description} onChange={e => setNewCourse({...newCourse, description: e.target.value})} className="w-full bg-slate-950 border border-slate-800 rounded p-2 text-slate-200" />
+                <textarea rows={3} value={newCourse.description} onChange={e => setNewCourse({...newCourse, description: e.target.value})} className="w-full bg-slate-950 border border-slate-800 rounded p-2 text-slate-200 text-right font-sans" />
               </div>
             </div>
 

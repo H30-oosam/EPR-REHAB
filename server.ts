@@ -139,29 +139,99 @@ const initialDB = {
   ]
 };
 
-// Simple helper to load actual DB or fall back to seed
+// Professional high-resilience file-backed database engine with auto-backup and self-healing
 function getDB() {
+  const BACKUP_PATH = DB_FILE_PATH + ".bak";
+  let rawData: any = null;
+
+  // Try loading primary database file
   if (fs.existsSync(DB_FILE_PATH)) {
     try {
       const content = fs.readFileSync(DB_FILE_PATH, "utf-8");
-      return JSON.parse(content);
+      rawData = JSON.parse(content);
     } catch (e) {
-      console.error("Error reading db file, regenerating fallback seed:", e);
-      return initialDB;
+      console.error("⚠️ Primary db.json corrupted, trying recovery from backup:", e);
     }
-  } else {
-    // Write the seed initially
-    fs.writeFileSync(DB_FILE_PATH, JSON.stringify(initialDB, null, 2), "utf-8");
-    return initialDB;
   }
+
+  // Fallback to recovery database backup
+  if (!rawData && fs.existsSync(BACKUP_PATH)) {
+    try {
+      const backupContent = fs.readFileSync(BACKUP_PATH, "utf-8");
+      rawData = JSON.parse(backupContent);
+      console.log("💎 Successfully recovered database state from backup file.");
+    } catch (e) {
+      console.error("⚠️ Recovery backup file also corrupted or unreadable:", e);
+    }
+  }
+
+  // If both fail or don't exist, instantiate with seed data
+  if (!rawData) {
+    console.log("🌱 Database files not found or corrupted. Seeding fresh database template.");
+    rawData = JSON.parse(JSON.stringify(initialDB));
+    try {
+      fs.writeFileSync(DB_FILE_PATH, JSON.stringify(rawData, null, 2), "utf-8");
+      fs.writeFileSync(BACKUP_PATH, JSON.stringify(rawData, null, 2), "utf-8");
+    } catch (err) {
+      console.error("❌ Failed to write initial seed DB:", err);
+    }
+  }
+
+  // Ensure high-availability cross-compatibility between database tables and frontend expected types
+  if (!rawData.logEntries) rawData.logEntries = [];
+  rawData.auditLogs = rawData.logEntries;
+
+  // Sync and unify configuration parameters
+  const dbConfig = rawData.config || {};
+  rawData.systemConfig = {
+    appName: dbConfig.appName || dbConfig.companyNameAr || "مؤسسة حسام الورداني لإدارة الأعمال",
+    backupFrequency: dbConfig.backupFrequency || "daily",
+    isDatabaseEncrypted: dbConfig.isDatabaseEncrypted || false,
+    whatsappCallbackUrl: dbConfig.whatsappCallbackUrl || "",
+    // Retain classic attributes too
+    companyNameAr: dbConfig.companyNameAr || "مؤسسة حسام الورداني لإدارة الأعمال والتسويق الرقمي",
+    companyNameEn: dbConfig.companyNameEn || "Hossam Elwardany BMS",
+    currency: dbConfig.currency || "جنيهاً مصرياً EGP",
+    taxRate: dbConfig.taxRate || 14,
+    whatsAppNotifications: dbConfig.whatsAppNotifications !== false,
+    emailNotifications: dbConfig.emailNotifications !== false,
+    backupStatus: dbConfig.backupStatus || "مكتمل تلقائياً",
+    lastBackupTime: dbConfig.lastBackupTime || new Date().toLocaleString("ar-EG")
+  };
+
+  // Re-write to ensure sub-objects are referenced accurately
+  rawData.config = rawData.systemConfig;
+
+  return rawData;
 }
 
-// Helper to save DB to file-backed json
+// Helper to save DB with automated background redundancy backup
 function saveDB(data: any) {
   try {
-    fs.writeFileSync(DB_FILE_PATH, JSON.stringify(data, null, 2), "utf-8");
+    // Keep internal aliases inline and updated
+    if (data.logEntries) {
+      data.auditLogs = data.logEntries;
+    } else if (data.auditLogs) {
+      data.logEntries = data.auditLogs;
+    }
+
+    if (data.systemConfig) {
+      data.config = {
+        ...data.config,
+        ...data.systemConfig,
+        companyNameAr: data.systemConfig.appName || data.config?.companyNameAr,
+        appName: data.systemConfig.appName
+      };
+    } else if (data.config) {
+      data.systemConfig = data.config;
+    }
+
+    const payload = JSON.stringify(data, null, 2);
+    fs.writeFileSync(DB_FILE_PATH, payload, "utf-8");
+    // Write copy to redundant backup path
+    fs.writeFileSync(DB_FILE_PATH + ".bak", payload, "utf-8");
   } catch (e) {
-    console.error("Error writing to db.json:", e);
+    console.error("❌ Error writing to database file backed systems:", e);
   }
 }
 
@@ -178,11 +248,15 @@ function writeAuditLog(userId: string, userName: string, action: string, details
     timestamp: new Date().toISOString(),
     details
   };
+  
+  if (!db.logEntries) db.logEntries = [];
   db.logEntries.unshift(log);
-  // Cap logs at 100 for safety and cleanup
+
+  // Cap logs at 100 for storage safety
   if (db.logEntries.length > 100) {
     db.logEntries = db.logEntries.slice(0, 100);
   }
+  
   saveDB(db);
 }
 
@@ -191,16 +265,21 @@ app.get("/api/db", (req, res) => {
   res.json(getDB());
 });
 
-// Update standard collections
+// Update standard collections (with intelligent schema key bridging)
 app.post("/api/update-collection", (req, res) => {
   const { collectionName, items, userId, userName, actionLogText } = req.body;
   const db = getDB();
   
-  if (!db[collectionName]) {
-    return res.status(400).json({ error: `القسم غير موجود: ${collectionName}` });
+  // Clean translation aliases for update payloads
+  let normalizedKey = collectionName;
+  if (collectionName === "systemConfig") {
+    normalizedKey = "config";
+  } else if (collectionName === "auditLogs") {
+    normalizedKey = "logEntries";
   }
 
-  db[collectionName] = items;
+  // Soft fallback if table key is completely new
+  db[normalizedKey] = items;
   saveDB(db);
 
   if (userId && userName && actionLogText) {

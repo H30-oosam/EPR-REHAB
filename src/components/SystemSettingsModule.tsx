@@ -24,6 +24,15 @@ export default function SystemSettingsModule({
   const [configForm, setConfigForm] = useState<ERPConfig>({ ...systemConfig });
   const [isSavingConfig, setIsSavingConfig] = useState(false);
 
+  // Admin password change states
+  const [adminPasswordForm, setAdminPasswordForm] = useState({
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: ""
+  });
+  const [passwordChangeMessage, setPasswordChangeMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [isSavingPassword, setIsSavingPassword] = useState(false);
+
   // New User / custom role states
   const [showUserModal, setShowUserModal] = useState(false);
   const [newUser, setNewUser] = useState({
@@ -33,6 +42,64 @@ export default function SystemSettingsModule({
     role: "employee",
     permissions: [] as string[]
   });
+
+  const handleUpdateAdminPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPasswordChangeMessage(null);
+    
+    if (adminPasswordForm.newPassword.length < 4) {
+      setPasswordChangeMessage({ type: "error", text: "يجب أن لا تقل كلمة المرور الجديدة عن 4 خانات لسلامة الأمان" });
+      return;
+    }
+    
+    if (adminPasswordForm.newPassword !== adminPasswordForm.confirmPassword) {
+      setPasswordChangeMessage({ type: "error", text: "كلمتا المرور غير متطابقتين" });
+      return;
+    }
+    
+    setIsSavingPassword(true);
+    
+    // Find the admin user in users list
+    const adminIndex = users.findIndex(u => u.email === "admin@erp.com" || u.role === "admin");
+    if (adminIndex === -1) {
+      setPasswordChangeMessage({ type: "error", text: "لم يتم العثور على حساب المدير المعتمد بالنظام." });
+      setIsSavingPassword(false);
+      return;
+    }
+    
+    const adminUser = users[adminIndex];
+    const oldPassword = adminUser.password || "123456";
+    
+    if (adminPasswordForm.currentPassword !== oldPassword) {
+      setPasswordChangeMessage({ type: "error", text: "رمز الدخول الحالي غير صحيح لمطابقة الهوية" });
+      setIsSavingPassword(false);
+      return;
+    }
+    
+    const updatedUsers = [...users];
+    updatedUsers[adminIndex] = {
+      ...adminUser,
+      password: adminPasswordForm.newPassword
+    };
+    
+    const success = await syncERPCollection(
+      "users", 
+      updatedUsers, 
+      currentUser.id, 
+      currentUser.name, 
+      `تعديل وتحديث كلمة المرور السرية (PIN) للمدير (admin@erp.com) من لوحة التحكم بنجاح.`
+    );
+    
+    if (success) {
+      setPasswordChangeMessage({ type: "success", text: "✓ تم تحديث كلمة مرور المدير بنجاح في السيرفر السحابي!" });
+      setAdminPasswordForm({ currentPassword: "", newPassword: "", confirmPassword: "" });
+      onDataChanged();
+    } else {
+      setPasswordChangeMessage({ type: "error", text: "فشل تحديث كلمة المرور في السيرفر السحابي. يرجى المحاولة لاحقاً." });
+    }
+    
+    setIsSavingPassword(false);
+  };
 
   const handleSaveConfig = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -125,68 +192,138 @@ export default function SystemSettingsModule({
 
       {/* 1. General Config Tab */}
       {activeSettingsTab === "general" && (
-        <form onSubmit={handleSaveConfig} className="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-lg space-y-4">
-          <h3 className="text-sm font-bold text-slate-100 font-sans border-b border-slate-850 pb-2 mb-2">إعدادات النظام العامة وتكامل الـ API</h3>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs font-sans">
-            <div>
-              <label className="block text-slate-400 mb-1">اسم نظام الـ ERP السحابي</label>
-              <input
-                type="text"
-                value={configForm.appName}
-                onChange={e => setConfigForm({ ...configForm, appName: e.target.value })}
-                className="w-full bg-slate-950 border border-slate-800 rounded p-2 text-slate-200 text-right focus:outline-none focus:border-indigo-500"
-              />
-            </div>
-            <div>
-              <label className="block text-slate-400 mb-1">تردد النسخ الاحتياطي السحابي التلقائي</label>
-              <select
-                value={configForm.backupFrequency}
-                onChange={e => setConfigForm({ ...configForm, backupFrequency: e.target.value as any })}
-                className="w-full bg-slate-950 border border-slate-800 rounded p-2 text-slate-200 focus:outline-none"
-              >
-                <option value="daily">يومي تلقائي (آمن)</option>
-                <option value="weekly">أسبوعي</option>
-                <option value="monthly">شهري</option>
-              </select>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs font-sans">
-            <div>
-              <label className="block text-slate-400 mb-1">رابط الهوك لتنبيهات الـ WhatsApp API Key</label>
-              <input
-                type="text"
-                value={configForm.whatsappCallbackUrl}
-                onChange={e => setConfigForm({ ...configForm, whatsappCallbackUrl: e.target.value })}
-                className="w-full bg-slate-950 border border-slate-800 rounded p-2 text-slate-200 text-left font-mono focus:outline-none"
-              />
-              <p className="text-[10px] text-slate-500 mt-1">يُستعمل للربط المباشر مع Meta API لإصدار الحزم تلقائياً.</p>
-            </div>
-            <div className="space-y-3">
-              <label className="block text-slate-400 font-sans">تدابير الأمان وتشفير قواعد البيانات</label>
-              <label className="flex items-center gap-2 justify-end text-slate-300 font-sans cursor-pointer">
-                <span>تفعيل تشفير البيانات الحساسة (SHA-256)</span>
+        <div className="space-y-6">
+          <form onSubmit={handleSaveConfig} className="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-lg space-y-4">
+            <h3 className="text-sm font-bold text-slate-100 font-sans border-b border-slate-850 pb-2 mb-2">إعدادات النظام العامة وتكامل الـ API</h3>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs font-sans">
+              <div>
+                <label className="block text-slate-400 mb-1">اسم نظام الـ ERP السحابي</label>
                 <input
-                  type="checkbox"
-                  checked={configForm.isDatabaseEncrypted}
-                  onChange={e => setConfigForm({ ...configForm, isDatabaseEncrypted: e.target.checked })}
-                  className="w-4 h-4 accent-indigo-500"
+                  type="text"
+                  value={configForm.appName}
+                  onChange={e => setConfigForm({ ...configForm, appName: e.target.value })}
+                  className="w-full bg-slate-950 border border-slate-800 rounded p-2 text-slate-200 text-right focus:outline-none focus:border-indigo-500"
                 />
-              </label>
+              </div>
+              <div>
+                <label className="block text-slate-400 mb-1">تردد النسخ الاحتياطي السحابي التلقائي</label>
+                <select
+                  value={configForm.backupFrequency}
+                  onChange={e => setConfigForm({ ...configForm, backupFrequency: e.target.value as any })}
+                  className="w-full bg-slate-950 border border-slate-800 rounded p-2 text-slate-200 focus:outline-none"
+                >
+                  <option value="daily">يومي تلقائي (آمن)</option>
+                  <option value="weekly">أسبوعي</option>
+                  <option value="monthly">شهري</option>
+                </select>
+              </div>
             </div>
-          </div>
 
-          <div className="flex justify-start pt-3 border-t border-slate-800">
-            <button
-              type="submit"
-              disabled={isSavingConfig}
-              className="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs py-2 px-5 rounded-lg transition"
-            >
-              {isSavingConfig ? "جاري الحفظ والتوثيق..." : "حفظ التغييرات الأساسية"}
-            </button>
-          </div>
-        </form>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs font-sans">
+              <div>
+                <label className="block text-slate-400 mb-1">رابط الهوك لتنبيهات الـ WhatsApp API Key</label>
+                <input
+                  type="text"
+                  value={configForm.whatsappCallbackUrl}
+                  onChange={e => setConfigForm({ ...configForm, whatsappCallbackUrl: e.target.value })}
+                  className="w-full bg-slate-950 border border-slate-800 rounded p-2 text-slate-200 text-left font-mono focus:outline-none"
+                />
+                <p className="text-[10px] text-slate-500 mt-1">يُستعمل للربط المباشر مع Meta API لإصدار الحزم تلقائياً.</p>
+              </div>
+              <div className="space-y-3">
+                <label className="block text-slate-400 font-sans">تدابير الأمان وتشفير قواعد البيانات</label>
+                <label className="flex items-center gap-2 justify-end text-slate-300 font-sans cursor-pointer">
+                  <span>تفعيل تشفير البيانات الحساسة (SHA-256)</span>
+                  <input
+                    type="checkbox"
+                    checked={configForm.isDatabaseEncrypted}
+                    onChange={e => setConfigForm({ ...configForm, isDatabaseEncrypted: e.target.checked })}
+                    className="w-4 h-4 accent-indigo-500"
+                  />
+                </label>
+              </div>
+            </div>
+
+            <div className="flex justify-start pt-3 border-t border-slate-800">
+              <button
+                type="submit"
+                disabled={isSavingConfig}
+                className="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs py-2 px-5 rounded-lg transition"
+              >
+                {isSavingConfig ? "جاري الحفظ والتوثيق..." : "حفظ التغييرات الأساسية"}
+              </button>
+            </div>
+          </form>
+
+          {/* New Admin Password Update Form */}
+          <form onSubmit={handleUpdateAdminPassword} className="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-lg space-y-4">
+            <h3 className="text-sm font-bold text-slate-100 font-sans border-b border-slate-850 pb-2 mb-2 flex items-center gap-1.5 justify-end">
+              <Key className="w-4 h-4 text-amber-500 animate-pulse" />
+              <span>تغيير رمز الدخول وكلمة المرور للمدير (CEO / Admin)</span>
+            </h3>
+            
+            <p className="text-xs text-slate-400 font-sans leading-relaxed text-right">
+              تغيير الرقم السري (PIN / Password) الخاص بحساب المدير الرئيسي <span className="text-indigo-400 font-bold">admin@erp.com</span> للمحافظة على أمان وموثوقية النظام السحابي.
+            </p>
+
+            {passwordChangeMessage && (
+              <div className={`p-3 rounded-xl text-xs font-sans text-right border ${
+                passwordChangeMessage.type === "success" 
+                  ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400" 
+                  : "bg-rose-500/10 border-rose-500/30 text-rose-400"
+              }`}>
+                {passwordChangeMessage.text}
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs font-sans">
+              <div>
+                <label className="block text-slate-400 mb-1">رمز الدخول الحالي (PIN)</label>
+                <input
+                  required
+                  type="password"
+                  value={adminPasswordForm.currentPassword}
+                  onChange={e => setAdminPasswordForm({ ...adminPasswordForm, currentPassword: e.target.value })}
+                  placeholder="رمز الدخول الحالي (مثال: 123456)"
+                  className="w-full bg-slate-950 border border-slate-800 rounded p-2 text-slate-200 text-right focus:outline-none focus:border-indigo-500"
+                />
+              </div>
+              <div>
+                <label className="block text-slate-400 mb-1">رمز الدخول الجديد</label>
+                <input
+                  required
+                  type="password"
+                  value={adminPasswordForm.newPassword}
+                  onChange={e => setAdminPasswordForm({ ...adminPasswordForm, newPassword: e.target.value })}
+                  placeholder="الرموز الجديدة (على الأقل 4 رموز)"
+                  className="w-full bg-slate-950 border border-slate-800 rounded p-2 text-slate-200 text-right focus:outline-none focus:border-indigo-500"
+                />
+              </div>
+              <div>
+                <label className="block text-slate-400 mb-1">تأكيد رمز الدخول الجديد</label>
+                <input
+                  required
+                  type="password"
+                  value={adminPasswordForm.confirmPassword}
+                  onChange={e => setAdminPasswordForm({ ...adminPasswordForm, confirmPassword: e.target.value })}
+                  placeholder="أعد كتابة الرمز الجديد لتأكيد المطابقة"
+                  className="w-full bg-slate-950 border border-slate-800 rounded p-2 text-slate-200 text-right focus:outline-none focus:border-indigo-500"
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-start pt-3 border-t border-slate-800">
+              <button
+                type="submit"
+                disabled={isSavingPassword}
+                className="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs py-2 px-5 rounded-lg transition"
+              >
+                {isSavingPassword ? "جاري التحديث والتأمين..." : "تحديث الرمز السري للمدير"}
+              </button>
+            </div>
+          </form>
+        </div>
       )}
 
       {/* 2. Custom Permissions and Users */}
