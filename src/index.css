@@ -1,0 +1,275 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", "Space Grotesk", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+}
+
+@layer base {
+  body {
+    background-color: #f8fafc; /* Slate 50 backplate */
+    color: #0f172a; /* Slate 900 text */
+    font-family: var(--font-sans);
+    direction: rtl; /* Set default Arabic direction */
+  }
+}
+
+/* HIGH DENSITY CUSTOM DESIGN THEME OVERRIDES */
+
+#erp-root-application {
+  background-color: #f8fafc !important;
+  color: #1e293b !important;
+}
+
+/* High Density Header light layout */
+#erp-root-application header {
+  background-color: #ffffff !important;
+  border-color: #e2e8f0 !important;
+  color: #0f172a !important;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05) !important;
+  padding-top: 0.5rem !important;
+  padding-bottom: 0.5rem !important;
+}
+
+#erp-root-application header h1 {
+  color: #0f172a !important;
+}
+
+#erp-root-application header p {
+  color: #2563eb !important; /* blue-600 */
+}
+
+/* User switcher in header */
+#erp-root-application header div.bg-slate-950,
+#erp-root-application header div.bg-slate-900\/40 {
+  background-color: #f1f5f9 !important;
+  border-color: #cbd5e1 !important;
+  color: #1e293b !important;
+}
+
+#erp-root-application header select {
+  background-color: #ffffff !important;
+  border-color: #cbd5e1 !important;
+  color: #1e293b !important;
+}
+
+/* Dark Sidebar layout preservation */
+#erp-root-application aside {
+  background-color: #0f172a !important; /* Deep dark slate to contrast main content */
+  border-color: #1e293b !important;
+  border-radius: 0.5rem !important;
+  color: #94a3b8 !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1) !important;
+}
+
+#erp-root-application aside h1,
+#erp-root-application aside h2,
+#erp-root-application aside h3,
+#erp-root-application aside div {
+  color: #f8fafc !important;
+}
+
+#erp-root-application aside button {
+  color: #94a3b8 !important;
+  font-weight: 500 !important;
+}
+
+#erp-root-application aside button:hover {
+  background-color: #1e293b !important;
+  color: #ffffff !important;
+}
+
+/* Selected tab highlighted with brand Blue-600 in sidebar navigation */
+#erp-root-application aside button.bg-indigo-600,
+#erp-root-application aside button[class*="bg-indigo-600"] {
+  background-color: #2563eb !important; /* Blue-600 brand accent */
+  color: #ffffff !important;
+  box-shadow: 0 1px 3px 0 rgba(37, 99, 235, 0.4) !important;
+}
+
+/* High Density Cards styling inside workspace content */
+#erp-root-application div.bg-slate-900:not(aside),
+#erp-root-application div.bg-slate-950:not(aside),
+#erp-root-application section.bg-slate-900:not(aside),
+#erp-root-application div.bg-slate-905:not(aside),
+#erp-root-application .bg-slate-900:not(aside),
+#erp-root-application .card:not(aside) {
+  background-color: #ffffff !important;
+  color: #1e293b !important;
+  border: 1px solid #cbd5e1 !important; /* border-slate-300 */
+  border-radius: 0.375rem !important; /* sharp core borders */
+  padding: 0.75rem !important; /* high-density padding */
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05) !important;
+}
+
+#erp-root-application main h1,
+#erp-root-application main h2,
+#erp-root-application main h3,
+#erp-root-application main h4,
+#erp-root-application main h5,
+#erp-root-application main h6,
+#erp-root-application main span.text-white {
+  color: #0f172a !important;
+}
+
+/* Light Mode welcome panel (previously dark gradient) */
+#erp-root-application main .bg-gradient-to-tr {
+  background: #ffffff !important;
+  background-image: linear-gradient(to top right, #ffffff, #eff6ff) !important; /* soft blue tint */
+  border-color: #bfdbfe !important; /* border-blue-200 */
+  border-right: 4px solid #2563eb !important; /* brand status bar */
+  border-radius: 0.50rem !important;
+  color: #1e293b !important;
+}
+
+#erp-root-application main .bg-gradient-to-tr h3 {
+  color: #1e3a8a !important; /* navy blue */
+}
+
+/* Global inputs, selects, and textareas */
+#erp-root-application input,
+#erp-root-application select,
+#erp-root-application textarea {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  border: 1px solid #cbd5e1 !important;
+  border-radius: 0.375rem !important;
+  font-size: 0.75rem !important;
+}
+
+#erp-root-application input:focus,
+#erp-root-application select:focus,
+#erp-root-application textarea:focus {
+  border-color: #2563eb !important;
+  box-shadow: 0 0 0 1px #2563eb !important;
+  outline: none !important;
+}
+
+/* Core Buttons in workspace */
+#erp-root-application button:not(aside button) {
+  border-radius: 0.375rem !important;
+}
+
+#erp-root-application .bg-indigo-600 {
+  background-color: #2563eb !important;
+}
+
+#erp-root-application .bg-indigo-600:hover {
+  background-color: #1d4ed8 !important;
+}
+
+#erp-root-application .text-indigo-400 {
+  color: #2563eb !important;
+}
+
+/* High Density Table spacing and aesthetics */
+#erp-root-application table {
+  background-color: #ffffff !important;
+  border-collapse: collapse !important;
+  width: 100% !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 0.375rem !important;
+  overflow: hidden !important;
+}
+
+#erp-root-application thead,
+#erp-root-application tr.bg-slate-900,
+#erp-root-application tr.bg-slate-950 {
+  background-color: #f1f5f9 !important; /* solid light header backplate */
+}
+
+#erp-root-application th {
+  background-color: #f8fafc !important;
+  border-bottom: 1px solid #cbd5e1 !important;
+  color: #475569 !important; /* slate-600 */
+  font-weight: 700 !important;
+  font-size: 10px !important;
+  padding: 0.5rem 0.75rem !important;
+}
+
+#erp-root-application td {
+  border-bottom: 1px solid #e2e8f0 !important;
+  color: #334155 !important;
+  font-size: 11px !important;
+  padding: 0.5rem 0.75rem !important;
+}
+
+#erp-root-application tbody tr:hover {
+  background-color: #eff6ff !important; /* subtle highlight hover */
+}
+
+/* High-contrast status badges / alert pills */
+#erp-root-application .bg-emerald-500\/10,
+#erp-root-application .bg-emerald-600\/10,
+#erp-root-application .text-emerald-400,
+#erp-root-application .text-emerald-300 {
+  background-color: #ecfdf5 !important; /* light green */
+  color: #047857 !important; /* dark green text */
+  border: 1px solid #a7f3d0 !important;
+}
+
+#erp-root-application .bg-rose-500\/10,
+#erp-root-application .bg-red-500\/10,
+#erp-root-application .text-rose-400,
+#erp-root-application .text-red-400 {
+  background-color: #fef2f2 !important; /* light red */
+  color: #b91c1c !important; /* dark red text */
+  border: 1px solid #fecaca !important;
+}
+
+#erp-root-application .bg-amber-500\/10,
+#erp-root-application .bg-yellow-500\/10,
+#erp-root-application .text-amber-400,
+#erp-root-application .text-yellow-400 {
+  background-color: #fffbeb !important; /* light yellow */
+  color: #b45309 !important; /* dark yellow text */
+  border: 1px solid #fde68a !important;
+}
+
+/* Modals and view dialog layers */
+#erp-root-application .fixed {
+  background-color: rgba(15, 23, 42, 0.45) !important;
+  backdrop-filter: blur(4px) !important;
+}
+
+#erp-root-application .fixed div.bg-slate-900,
+#erp-root-application .fixed form {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  border-color: #e2e8f0 !important;
+  border-radius: 0.5rem !important;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* High Density Compact lists and rows */
+#erp-root-application .space-y-2 > div,
+#erp-root-application .space-y-3 > div {
+  padding: 0.5rem 0.75rem !important;
+  background-color: #f8fafc !important;
+  border-color: #e2e8f0 !important;
+  color: #1e293b !important;
+}
+
+/* Footer layout update */
+#erp-root-application footer {
+  background-color: #f1f5f9 !important;
+  border-top: 1px solid #cbd5e1 !important;
+  color: #475569 !important;
+}
+
+/* Scrollbars customized to look clean */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
